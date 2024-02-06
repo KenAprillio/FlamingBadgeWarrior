@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-[CreateAssetMenu]
+[CreateAssetMenu(menuName ="Flaming Badge Warrior/Tile Data")]
 public class TileData : ScriptableObject
 {
     public enum TileType

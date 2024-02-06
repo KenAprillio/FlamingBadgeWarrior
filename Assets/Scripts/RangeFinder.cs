@@ -65,7 +65,6 @@ public class RangeFinder
                             surroundingTiles.Add(map[rightOfTile]);
                         }
                     }
-
                 } else
                 {
                     break;
@@ -106,7 +105,6 @@ public class RangeFinder
                             surroundingTiles.Add(map[rightOfTile]);
                         }
                     }
-
                 }
                 else
                 {
