@@ -47,12 +47,20 @@ public class MouseController : MonoBehaviour
                     character = overlayTile.unitOnTile;
                     PositionCharacterOnTile(character, overlayTile);
                     GetInRangeTiles();
-                } else if (character)
+                } else if (character && overlayTile.isAccesible)
                 {
                     character.activeTile.unitOnTile = null;
                     // find path to the clicked tile
                     path = pathFinder.FindPath(character.activeTile, overlayTile, inRangeTiles);
                     overlayTile.unitOnTile = character;
+                } else
+                {
+                    character = null;
+
+                    foreach (var item in inRangeTiles)
+                    {
+                        item.HideTile();
+                    }   
                 }
             }
         }
@@ -100,6 +108,7 @@ public class MouseController : MonoBehaviour
             foreach (var item in inRangeTiles)
             {
                 item.HideTile();
+                character = null;
             }
             //GetInRangeTiles();
         }
