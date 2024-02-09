@@ -17,6 +17,7 @@ public class OverlayTile : MonoBehaviour
     public int moveCost;
 
     public bool isStartingTile = false;
+    public CharacterInfo unitOnTile;
 
     public Vector2Int grid2DLocation { get { return new Vector2Int(gridLocation.x, gridLocation.y); } }
 

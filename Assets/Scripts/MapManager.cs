@@ -7,12 +7,21 @@ using UnityEngine.Tilemaps;
 public class MapManager : MonoBehaviour
 {
     private static MapManager _instance;
-
     public static MapManager Instance { get { return _instance; } }
 
+    [Header("Cursor Object")]
+    public MouseController cursor;
+    public int assignedTeam;
+
+    [Header("Tile Overlay Prefab")]
     public OverlayTile overlayTilePrefab;
     public GameObject overlayContainer;
+
+    [Header("Tile Data List")]
     public List<TileData> tileDatas;
+
+    [Header("Unit Prefabs")]
+    [SerializeField] private GameObject[] unitPrefabs;
 
     public Dictionary<Vector2Int, OverlayTile> map;
     public Dictionary<TileBase, TileData> dataFromTiles;
@@ -50,7 +59,7 @@ public class MapManager : MonoBehaviour
         BoundsInt bounds = tileMap.cellBounds;
 
         // looping through every single tile
-        for(int y = bounds.max.y; y >= bounds.min.y; y--)
+        for(int y = bounds.min.y; y <= bounds.max.y; y++)
         {
             for (int x = bounds.min.x; x < bounds.max.x; x++)
             {
@@ -76,6 +85,62 @@ public class MapManager : MonoBehaviour
                 }
             }
         }
+
+        SpawnAllUnits();
+    }
+
+    private void SpawnAllUnits()
+    {
+        // Spawning first player units
+        Vector2Int unitPos = new Vector2Int(1, 1);
+        CharacterInfo unitSpawn = Instantiate(unitPrefabs[0]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 0;
+
+        unitPos = new Vector2Int(2,1);
+        unitSpawn = Instantiate(unitPrefabs[1]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 0;
+
+        unitPos = new Vector2Int(3,1);
+        unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 0;
+
+        unitPos = new Vector2Int(4,1);
+        unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 0;
+
+
+        // Spawning second player units
+        unitPos = new Vector2Int(10, 10);
+        unitSpawn = Instantiate(unitPrefabs[0]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 1;
+
+        unitPos = new Vector2Int(9, 10);
+        unitSpawn = Instantiate(unitPrefabs[1]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 1;
+
+        unitPos = new Vector2Int(8, 10);
+        unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 1;
+
+        unitPos = new Vector2Int(7, 10);
+        unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
+        cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
+        map[unitPos].unitOnTile = unitSpawn;
+        unitSpawn.team = 1;
     }
 
     // Check neighbouring tiles in top, bottom, left, and right of the tile

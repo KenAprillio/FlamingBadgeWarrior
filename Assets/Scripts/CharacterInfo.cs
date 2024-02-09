@@ -4,12 +4,7 @@ using UnityEngine;
 
 public class CharacterInfo : MonoBehaviour
 {
-    public enum CharacterClass
-    {
-        Infantry,
-        Cavalry,
-        Flier
-    }
-    public CharacterClass characterClass;
+    public UnitData characterClass;
     public OverlayTile activeTile;
+    public int team;
 }

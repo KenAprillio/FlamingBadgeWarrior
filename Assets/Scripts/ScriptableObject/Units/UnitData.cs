@@ -12,9 +12,9 @@ public class UnitData : ScriptableObject
         Flier
     }
 
-    
+    [SerializeField] public UnitClass unitClass;
+    public Sprite unitSprite;
 
-    [SerializeField] public UnitClass unitType;
     [Header("Unit Health")]
     public float healthPoints;
     public int moveRange;

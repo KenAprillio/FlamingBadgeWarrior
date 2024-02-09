@@ -41,18 +41,18 @@ public class MouseController : MonoBehaviour
             // Highlights the tile when clicked
             if (Input.GetMouseButtonDown(0))
             {
-                //overlayTile.ShowTile();
-
-                // If theres no character then spawn one
-                if (character == null)
+                // If theres a unit then find walk range
+                if (overlayTile.unitOnTile && overlayTile.unitOnTile.team == MapManager.Instance.assignedTeam)
                 {
-                    character = Instantiate(characterPrefab).GetComponent<CharacterInfo>();
-                    PositionCharacterOnTile(overlayTile);
+                    character = overlayTile.unitOnTile;
+                    PositionCharacterOnTile(character, overlayTile);
                     GetInRangeTiles();
-                } else
+                } else if (character)
                 {
-                    // When theres character then find path to the clicked tile
+                    character.activeTile.unitOnTile = null;
+                    // find path to the clicked tile
                     path = pathFinder.FindPath(character.activeTile, overlayTile, inRangeTiles);
+                    overlayTile.unitOnTile = character;
                 }
             }
         }
@@ -91,13 +91,17 @@ public class MouseController : MonoBehaviour
 
         if (Vector2.Distance(character.transform.position, path[0].transform.position) < 0.0001f)
         {
-            PositionCharacterOnTile(path[0]);
+            PositionCharacterOnTile(character, path[0]);
             path.RemoveAt(0);
         }
 
         if (path.Count == 0)
         {
-            GetInRangeTiles();
+            foreach (var item in inRangeTiles)
+            {
+                item.HideTile();
+            }
+            //GetInRangeTiles();
         }
     }
 
@@ -117,10 +121,10 @@ public class MouseController : MonoBehaviour
         return null;
     }
 
-    private void PositionCharacterOnTile(OverlayTile tile)
+    public void PositionCharacterOnTile(CharacterInfo unit, OverlayTile tile)
     {
-        character.transform.position = new Vector3(tile.transform.position.x, tile.transform.position.y, tile.transform.position.z);
-        character.GetComponent<SpriteRenderer>().sortingOrder = tile.GetComponent<SpriteRenderer>().sortingOrder + 5;
-        character.activeTile = tile;
+        unit.transform.position = new Vector3(tile.transform.position.x, tile.transform.position.y, tile.transform.position.z);
+        unit.GetComponent<SpriteRenderer>().sortingOrder = tile.GetComponent<SpriteRenderer>().sortingOrder + 5;
+        unit.activeTile = tile;
     }
 }
