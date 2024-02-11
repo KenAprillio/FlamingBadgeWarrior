@@ -1,7 +1,13 @@
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+
+public enum CameraAngle
+{
+    menu = 0,
+    playerOne = 1,
+    playerTwo = 2,
+}
 
 public class GameUI : MonoBehaviour
 {
@@ -12,6 +18,21 @@ public class GameUI : MonoBehaviour
     public Client client;
 
     [SerializeField] private TMP_InputField addressInput;
+    [SerializeField] private GameObject[] cameraAngles;
+
+    [Header("Canvas Menus")]
+    [SerializeField] private GameObject mainMenu;
+    [SerializeField] private GameObject onlineSetupMenu;
+    [SerializeField] private GameObject waitingConnectionMenu;
+
+    [Header("Gameplay UI")]
+    [SerializeField] private GameObject unitInfo;
+    [SerializeField] private Image unitSprite;
+    [SerializeField] private TMP_Text unitName;
+    [SerializeField] private TMP_Text unitHealth;
+
+
+
 
     private void Awake()
     {
@@ -23,6 +44,24 @@ public class GameUI : MonoBehaviour
         {
             _instance = this;
         }
+
+        RegisterEvents();
+    }
+
+    // Camera Functions
+    public void ChangeCamera(CameraAngle index)
+    {
+        for (int i = 0; i < cameraAngles.Length; i++)
+            cameraAngles[i].SetActive(false);
+
+        cameraAngles[(int)index].SetActive(true);
+    }
+
+    public void ShowUnitInfo(CharacterInfo character)
+    {
+        unitSprite.sprite = character.characterClass.unitSprite;
+        unitName.text = character.characterClass.name;
+        unitHealth.text = character.characterClass.healthPoints + " / " + Mathf.Abs(character.currentHealth);
     }
 
     public void OnOnlineHostButton()
@@ -40,5 +79,21 @@ public class GameUI : MonoBehaviour
     {
         server.Shutdown();
         client.Shutdown();
+    }
+
+    private void RegisterEvents()
+    {
+        NetUtility.C_START_GAME += OnStartGameClient;
+    }
+    private void UnregisterEvents()
+    {
+        NetUtility.C_START_GAME -= OnStartGameClient;
+    }
+
+    private void OnStartGameClient(NetMessage obj)
+    {
+        mainMenu.SetActive(false);
+        onlineSetupMenu.SetActive(false);
+        waitingConnectionMenu.SetActive(false);
     }
 }

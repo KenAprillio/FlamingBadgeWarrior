@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Networking.Transport;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -11,7 +13,7 @@ public class MapManager : MonoBehaviour
 
     [Header("Cursor Object")]
     public MouseController cursor;
-    public int assignedTeam;
+    public bool isPlayerOneTurn = true;
 
     [Header("Tile Overlay Prefab")]
     public OverlayTile overlayTilePrefab;
@@ -26,8 +28,15 @@ public class MapManager : MonoBehaviour
     public Dictionary<Vector2Int, OverlayTile> map;
     public Dictionary<TileBase, TileData> dataFromTiles;
 
+    [SerializeField] private GameObject tileMapObj;
+
+    // Multiplayer Logic
+    private int playerCount = -1;
+    /*[HideInInspector] */public int currentTeam = -1;
+
     private void Awake()
     {
+        #region Singleton
         if (_instance != null && _instance != this)
         {
             Destroy(this.gameObject);
@@ -36,7 +45,10 @@ public class MapManager : MonoBehaviour
         {
             _instance = this;
         }
+        #endregion
 
+        #region Tiledata
+        // Gets tiledata scriptable object from the list and adds them to the corresponding tile
         dataFromTiles = new Dictionary<TileBase, TileData>();
         foreach (var tileData in tileDatas)
         {
@@ -45,13 +57,16 @@ public class MapManager : MonoBehaviour
                 dataFromTiles.Add(tile, tileData);
             }
         }
+        #endregion
+
+        RegisterEvents();
     }
 
     // Start is called before the first frame update
     void Start()
     {
         // Gets tilemap component from this gameobject
-        var tileMap = gameObject.GetComponentInChildren<Tilemap>();
+        var tileMap = tileMapObj.GetComponent<Tilemap>();
         map = new Dictionary<Vector2Int, OverlayTile>();
 
 
@@ -218,5 +233,46 @@ public class MapManager : MonoBehaviour
         }
 
         return neighbours;
+    }
+
+    private void RegisterEvents()
+    {
+        NetUtility.S_WELCOME += OnWelcomeServer;
+
+        NetUtility.C_WELCOME += OnWelcomeClient;
+        NetUtility.C_START_GAME += OnStartGameClient;
+    }
+
+    // Server
+    private void OnWelcomeServer(NetMessage msg, NetworkConnection cnn)
+    {
+        // Client has connected, assign a team and return the message to them
+        NetWelcome nw = msg as NetWelcome;
+
+        // Assign a team
+        nw.AssignedTeam = ++playerCount;
+
+        // Return back to client
+        Server.Instance.SendToClient(cnn, nw);
+
+        // If full, start the game
+        if (playerCount == 1)
+            Server.Instance.Broadcast(new NetStartGame());
+    }
+
+    // Client
+    private void OnWelcomeClient(NetMessage msg)
+    {
+        // Receive the connection message
+        NetWelcome nw = msg as NetWelcome;
+
+        // Assign the team
+        currentTeam = nw.AssignedTeam;
+
+        Debug.Log($"My Assigned team is {nw.AssignedTeam}");
+    }
+    private void OnStartGameClient(NetMessage obj)
+    {
+        GameUI.Instance.ChangeCamera((currentTeam == 0) ? CameraAngle.playerOne : CameraAngle.playerTwo);
     }
 }

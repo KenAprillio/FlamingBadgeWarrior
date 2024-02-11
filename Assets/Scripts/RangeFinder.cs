@@ -9,7 +9,6 @@ public class RangeFinder
     public List<OverlayTile> GetTilesInRange(OverlayTile startingTile, int range, CharacterInfo selectedChar)
     {
         var inRangeTiles = new List<OverlayTile>();
-        int stepCount = 0;
 
         inRangeTiles.Add(startingTile);
 
@@ -20,8 +19,8 @@ public class RangeFinder
 
         var surroundingTiles = new List<OverlayTile>();
 
-        surroundingTiles.AddRange(GetNeighbouringTopTiles(startingTile, range));
-        surroundingTiles.AddRange(GetNeighbouringRightTiles(startingTile, range));
+        surroundingTiles.AddRange(GetNeighbouringTopTiles(startingTile, range, selectedChar));
+        surroundingTiles.AddRange(GetNeighbouringRightTiles(startingTile, range, selectedChar));
         inRangeTiles.AddRange(surroundingTiles);
 
 
@@ -29,23 +28,40 @@ public class RangeFinder
     }
 
     // Get surrounding top and bottom tiles
-    public List<OverlayTile> GetNeighbouringTopTiles(OverlayTile overlayTile, int range)
+    public List<OverlayTile> GetNeighbouringTopTiles(OverlayTile overlayTile, int range, CharacterInfo character)
     {
         var surroundingTiles = new List<OverlayTile>();
         var map = MapManager.Instance.map;
 
         OverlayTile currentTile = overlayTile;
+
+        // Get Top Tiles
+        #region Top Tiles
         for (int i = range; i > 0;)
         {
             Vector2Int locationToCheck = new Vector2Int(currentTile.gridLocation.x, currentTile.gridLocation.y + 1);
 
             if (map.ContainsKey(locationToCheck))
             {
+                /*if (map[locationToCheck].tileData.tileType == TileData.TileType.Ruins)
+                    break;*/
+
                 if (map[locationToCheck].tileData.moveCost <= i)
                 {
+                    if (map[locationToCheck].tileData.tileType == TileData.TileType.Mountains &&
+                        character.characterClass.unitClass != UnitData.UnitClass.Flier)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Cavalry)
+                        break;
+                    else if(map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Infantry)
+                        i -= map[locationToCheck].tileData.moveCost;
+                    else
+                        i--;
+
                     surroundingTiles.Add(map[locationToCheck]);
                     currentTile = map[locationToCheck];
-                    i -= map[locationToCheck].tileData.moveCost;
 
                     Vector2Int leftOfTile = new Vector2Int(currentTile.gridLocation.x - 1, currentTile.gridLocation.y);
                     Vector2Int rightOfTile = new Vector2Int(currentTile.gridLocation.x + 1, currentTile.gridLocation.y);
@@ -54,7 +70,10 @@ public class RangeFinder
                     {
                         if (map[leftOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[leftOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[leftOfTile]);
                         }
                     }
 
@@ -62,7 +81,10 @@ public class RangeFinder
                     {
                         if (map[rightOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[rightOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[rightOfTile]);
                         }
                     }
                 } else
@@ -74,6 +96,10 @@ public class RangeFinder
                 break;
             }
         }
+        #endregion
+
+        // Get Bottom Tiles
+        #region Bottom Tiles
         currentTile = overlayTile;
         for (int i = range; i > 0;)
         {
@@ -81,11 +107,24 @@ public class RangeFinder
 
             if (map.ContainsKey(locationToCheck))
             {
+                if (map[locationToCheck].tileData.tileType == TileData.TileType.Ruins)
+                    break;
                 if (map[locationToCheck].tileData.moveCost <= i)
                 {
+                    if (map[locationToCheck].tileData.tileType == TileData.TileType.Mountains &&
+                        character.characterClass.unitClass != UnitData.UnitClass.Flier)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Cavalry)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Infantry)
+                        i -= map[locationToCheck].tileData.moveCost;
+                    else
+                        i--;
+
                     surroundingTiles.Add(map[locationToCheck]);
                     currentTile = map[locationToCheck];
-                    i -= map[locationToCheck].tileData.moveCost;
 
                     Vector2Int leftOfTile = new Vector2Int(currentTile.gridLocation.x - 1, currentTile.gridLocation.y);
                     Vector2Int rightOfTile = new Vector2Int(currentTile.gridLocation.x + 1, currentTile.gridLocation.y);
@@ -94,7 +133,10 @@ public class RangeFinder
                     {
                         if (map[leftOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[leftOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[leftOfTile]);
                         }
                     }
 
@@ -102,7 +144,10 @@ public class RangeFinder
                     {
                         if (map[rightOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[rightOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[rightOfTile]);
                         }
                     }
                 }
@@ -116,27 +161,44 @@ public class RangeFinder
                 break;
             }
         }
+        #endregion
         return surroundingTiles;
     }
 
     // Get surrounding left and right tiles
-    public List<OverlayTile> GetNeighbouringRightTiles(OverlayTile overlayTile, int range)
+    public List<OverlayTile> GetNeighbouringRightTiles(OverlayTile overlayTile, int range, CharacterInfo character)
     {
         var surroundingTiles = new List<OverlayTile>();
         var map = MapManager.Instance.map;
 
         OverlayTile currentTile = overlayTile;
+
+        // Get Right Tiles
+        #region Right Tiles
         for (int i = range; i > 0;)
         {
             Vector2Int locationToCheck = new Vector2Int(currentTile.gridLocation.x + 1, currentTile.gridLocation.y);
 
             if (map.ContainsKey(locationToCheck))
             {
+                if (map[locationToCheck].tileData.tileType == TileData.TileType.Ruins)
+                    break;
                 if (map[locationToCheck].tileData.moveCost <= i)
                 {
+                    if (map[locationToCheck].tileData.tileType == TileData.TileType.Mountains &&
+                        character.characterClass.unitClass != UnitData.UnitClass.Flier)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Cavalry)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Infantry)
+                        i -= map[locationToCheck].tileData.moveCost;
+                    else
+                        i--;
+
                     surroundingTiles.Add(map[locationToCheck]);
                     currentTile = map[locationToCheck];
-                    i -= map[locationToCheck].tileData.moveCost;
 
                     Vector2Int topOfTile = new Vector2Int(currentTile.gridLocation.x, currentTile.gridLocation.y + 1);
                     Vector2Int bottomOfTile = new Vector2Int(currentTile.gridLocation.x, currentTile.gridLocation.y - 1);
@@ -145,7 +207,10 @@ public class RangeFinder
                     {
                         if (map[topOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[topOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[topOfTile]);
                         }
                     }
 
@@ -153,10 +218,12 @@ public class RangeFinder
                     {
                         if (map[bottomOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[bottomOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[bottomOfTile]);
                         }
                     }
-
                 }
                 else
                 {
@@ -168,7 +235,10 @@ public class RangeFinder
                 break;
             }
         }
+        #endregion
 
+        // Get Left Tiles
+        #region Left Tiles
         currentTile = overlayTile;
         for (int i = range; i > 0;)
         {
@@ -176,11 +246,24 @@ public class RangeFinder
 
             if (map.ContainsKey(locationToCheck))
             {
+                if (map[locationToCheck].tileData.tileType == TileData.TileType.Ruins)
+                    break;
                 if (map[locationToCheck].tileData.moveCost <= i)
                 {
+                    if (map[locationToCheck].tileData.tileType == TileData.TileType.Mountains &&
+                        character.characterClass.unitClass != UnitData.UnitClass.Flier)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Cavalry)
+                        break;
+                    else if (map[locationToCheck].tileData.tileType == TileData.TileType.Forest &&
+                        character.characterClass.unitClass == UnitData.UnitClass.Infantry)
+                        i -= map[locationToCheck].tileData.moveCost;
+                    else
+                        i--;
+
                     surroundingTiles.Add(map[locationToCheck]);
                     currentTile = map[locationToCheck];
-                    i -= map[locationToCheck].tileData.moveCost;
 
                     Vector2Int topOfTile = new Vector2Int(currentTile.gridLocation.x, currentTile.gridLocation.y + 1);
                     Vector2Int bottomOfTile = new Vector2Int(currentTile.gridLocation.x, currentTile.gridLocation.y - 1);
@@ -189,7 +272,10 @@ public class RangeFinder
                     {
                         if (map[topOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[topOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[topOfTile]);
                         }
                     }
 
@@ -197,10 +283,12 @@ public class RangeFinder
                     {
                         if (map[bottomOfTile].tileData.moveCost <= i)
                         {
-                            surroundingTiles.Add(map[bottomOfTile]);
+                            if ((map[locationToCheck].tileData.tileType == TileData.TileType.Mountains && character.characterClass.unitClass == UnitData.UnitClass.Flier) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Forest && character.characterClass.unitClass != UnitData.UnitClass.Cavalry) ||
+                                (map[locationToCheck].tileData.tileType == TileData.TileType.Plains))
+                                surroundingTiles.Add(map[bottomOfTile]);
                         }
                     }
-
                 }
                 else
                 {
@@ -212,6 +300,7 @@ public class RangeFinder
                 break;
             }
         }
+        #endregion
         return surroundingTiles;
     }
 }

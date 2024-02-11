@@ -22,8 +22,6 @@ public class OverlayTile : MonoBehaviour
 
     public Vector2Int grid2DLocation { get { return new Vector2Int(gridLocation.x, gridLocation.y); } }
 
-    
-
     // Show the Selection Highlight
     public void ShowTile()
     {

@@ -83,6 +83,7 @@ public class Client : MonoBehaviour
         {
             if (cmd == NetworkEvent.Type.Connect)
             {
+                SendToServer(new NetWelcome());
                 Debug.Log("We're Connected!!");
             } 
             else if (cmd == NetworkEvent.Type.Data)
@@ -98,7 +99,6 @@ public class Client : MonoBehaviour
                 Shutdown();
             }
         }
-        
     }
 
     public void SendToServer(NetMessage msg)

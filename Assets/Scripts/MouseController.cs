@@ -14,14 +14,24 @@ public class MouseController : MonoBehaviour
     private PathFinder pathFinder;
     private RangeFinder rangeFinder;
     private List<OverlayTile> path = new List<OverlayTile>();
-    private List<OverlayTile> inRangeTiles = new List<OverlayTile>();
-    
+    public List<OverlayTile> inRangeTiles = new List<OverlayTile>();
+
+    MapManager mapManager;
+    public bool isMovingUnit;
+    [HideInInspector] public bool isAttackingUnit;
+
+    [Header("Gameplay UI Gameobjects")]
+    public GameObject unitData;
+    public GameObject playerActions;
+
+
 
     // Start is called before the first frame update
     void Start()
     {
         pathFinder = new PathFinder();
         rangeFinder = new RangeFinder();
+        mapManager = MapManager.Instance;
     }
 
     // Update is called once per frame
@@ -42,20 +52,34 @@ public class MouseController : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 // If theres a unit then find walk range
-                if (overlayTile.unitOnTile && overlayTile.unitOnTile.team == MapManager.Instance.assignedTeam)
+                if (overlayTile.unitOnTile && !overlayTile.unitOnTile.isPlayed)
                 {
-                    character = overlayTile.unitOnTile;
-                    PositionCharacterOnTile(character, overlayTile);
-                    GetInRangeTiles();
-                } else if (character && overlayTile.isAccesible)
+                    if ((overlayTile.unitOnTile.team == 0 && mapManager.isPlayerOneTurn && mapManager.currentTeam == 0) || 
+                        (overlayTile.unitOnTile.team == 1 && !mapManager.isPlayerOneTurn && mapManager.currentTeam == 1))
+                    {
+                        character = overlayTile.unitOnTile;
+                        PositionCharacterOnTile(character, overlayTile);
+                        GetUnitInfoAndShowUI();
+                        //GetInRangeTiles();
+                    }
+                } else if ((character && overlayTile.isAccesible) && isMovingUnit)
                 {
                     character.activeTile.unitOnTile = null;
+                    
                     // find path to the clicked tile
                     path = pathFinder.FindPath(character.activeTile, overlayTile, inRangeTiles);
                     overlayTile.unitOnTile = character;
-                } else
+                    foreach (var item in inRangeTiles)
+                    {
+                        item.HideTile();
+                    }
+                } else if (!isMovingUnit)
                 {
                     character = null;
+                    isMovingUnit = false;
+                    isAttackingUnit = false;
+                    unitData.SetActive(false);
+                    playerActions.SetActive(false);
 
                     foreach (var item in inRangeTiles)
                     {
@@ -72,14 +96,22 @@ public class MouseController : MonoBehaviour
         }
     }
 
-    private void GetInRangeTiles()
+    private void GetUnitInfoAndShowUI()
+    {
+        GameUI.Instance.ShowUnitInfo(character);
+        unitData.SetActive(true);
+        playerActions.SetActive(true);
+    }
+
+    public void GetInRangeTiles()
     {
         foreach (var item in inRangeTiles)
         {
             item.HideTile();
         }
 
-        inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, 3, character);
+        isMovingUnit = true;
+        inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, character.characterClass.moveRange, character);
 
         foreach (var item in inRangeTiles)
         {
@@ -105,11 +137,14 @@ public class MouseController : MonoBehaviour
 
         if (path.Count == 0)
         {
+            character.isPlayed = true;
             foreach (var item in inRangeTiles)
             {
                 item.HideTile();
-                character = null;
             }
+            character = null;
+            //mapManager.isPlayerOneTurn = !mapManager.isPlayerOneTurn;
+
             //GetInRangeTiles();
         }
     }
