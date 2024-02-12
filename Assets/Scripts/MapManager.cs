@@ -117,7 +117,7 @@ public class MapManager : MonoBehaviour
         unitSpawn = Instantiate(unitPrefabs[1]).GetComponent<CharacterInfo>();
         cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
         map[unitPos].unitOnTile = unitSpawn;
-        unitSpawn.team = 0;
+        unitSpawn.team = 1;
 
         unitPos = new Vector2Int(3,1);
         unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();

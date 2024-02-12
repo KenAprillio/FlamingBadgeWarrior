@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MouseController : MonoBehaviour
 {
@@ -17,14 +18,16 @@ public class MouseController : MonoBehaviour
     public List<OverlayTile> inRangeTiles = new List<OverlayTile>();
 
     MapManager mapManager;
+    bool phaseTwo = false;
     public bool isMovingUnit;
+    bool isChoosingUnit = true;
     [HideInInspector] public bool isAttackingUnit;
 
     [Header("Gameplay UI Gameobjects")]
     public GameObject unitData;
     public GameObject playerActions;
 
-
+    [SerializeField] private List<CharacterInfo> myUnits;
 
     // Start is called before the first frame update
     void Start()
@@ -32,6 +35,13 @@ public class MouseController : MonoBehaviour
         pathFinder = new PathFinder();
         rangeFinder = new RangeFinder();
         mapManager = MapManager.Instance;
+
+        GameObject[] units = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject unit in units)
+        {
+            if (unit.GetComponent<CharacterInfo>().team == 0)
+                myUnits.Add(unit.GetComponent<CharacterInfo>());
+        }
     }
 
     // Update is called once per frame
@@ -52,7 +62,7 @@ public class MouseController : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 // If theres a unit then find walk range
-                if (overlayTile.unitOnTile && !overlayTile.unitOnTile.isPlayed)
+                if (overlayTile.unitOnTile && !overlayTile.unitOnTile.isPlayed && isChoosingUnit && !isAttackingUnit && !phaseTwo)
                 {
                     if ((overlayTile.unitOnTile.team == 0 && mapManager.isPlayerOneTurn && mapManager.currentTeam == 0) || 
                         (overlayTile.unitOnTile.team == 1 && !mapManager.isPlayerOneTurn && mapManager.currentTeam == 1))
@@ -73,7 +83,32 @@ public class MouseController : MonoBehaviour
                     {
                         item.HideTile();
                     }
-                } else if (!isMovingUnit)
+                } else if (character && isAttackingUnit)
+                {
+                    if (!overlayTile.isAccesible)
+                    {
+                        foreach (var item in inRangeTiles)
+                        {
+                            item.HideTile();
+                        }
+                        isAttackingUnit = false;
+                        playerActions.SetActive(true);
+                    }else if (overlayTile.unitOnTile.team != mapManager.currentTeam && overlayTile.isAccesible)
+                    {
+                        Debug.Log("Attacked " + overlayTile.unitOnTile.name);
+                        character.isPlayed = true;
+                        foreach (var item in inRangeTiles)
+                        {
+                            item.HideTile();
+                        }
+
+                        phaseTwo = false;
+                        character = null;
+                        isMovingUnit = false;
+                        isAttackingUnit = false;
+                        isChoosingUnit = true;
+                    }
+                } else if (!isMovingUnit && !isChoosingUnit && !isAttackingUnit && !phaseTwo)
                 {
                     character = null;
                     isMovingUnit = false;
@@ -101,6 +136,8 @@ public class MouseController : MonoBehaviour
         GameUI.Instance.ShowUnitInfo(character);
         unitData.SetActive(true);
         playerActions.SetActive(true);
+        playerActions.transform.Find("Move Button").GetComponent<Button>().interactable = true;
+
     }
 
     public void GetInRangeTiles()
@@ -110,6 +147,7 @@ public class MouseController : MonoBehaviour
             item.HideTile();
         }
 
+        isChoosingUnit = false;
         isMovingUnit = true;
         inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, character.characterClass.moveRange, character);
 
@@ -117,6 +155,34 @@ public class MouseController : MonoBehaviour
         {
             item.ShowTile();
         }
+    }
+
+    public void GetInRangeAttack()
+    {
+        foreach (var item in inRangeTiles)
+        {
+            item.HideTile();
+        }
+
+        isChoosingUnit = true;
+        isAttackingUnit = true;
+        inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, character.characterClass.moveRange, character, true);
+
+        foreach (var item in inRangeTiles)
+        {
+            item.ShowAttackTile();
+        }
+    }
+
+    public void WaitAction()
+    {
+        character.isPlayed = true;
+        phaseTwo = false;
+        character = null;
+        isMovingUnit = false;
+        isAttackingUnit = false;
+        isChoosingUnit = true;
+
     }
 
     // Function to move along the path
@@ -137,12 +203,18 @@ public class MouseController : MonoBehaviour
 
         if (path.Count == 0)
         {
-            character.isPlayed = true;
+            character.hasMoved = true;
+            phaseTwo = true;
+            isChoosingUnit = false;
+            isMovingUnit = false;
             foreach (var item in inRangeTiles)
             {
                 item.HideTile();
             }
-            character = null;
+            playerActions.SetActive(true);
+            playerActions.transform.Find("Move Button").GetComponent<Button>().interactable = false;
+
+            //character = null;
             //mapManager.isPlayerOneTurn = !mapManager.isPlayerOneTurn;
 
             //GetInRangeTiles();
