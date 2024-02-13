@@ -31,6 +31,11 @@ public class GameUI : MonoBehaviour
     [SerializeField] private TMP_Text unitName;
     [SerializeField] private TMP_Text unitHealth;
 
+    [SerializeField] private GameObject enemyInfo;
+    [SerializeField] private Image enemySprite;
+    [SerializeField] private TMP_Text enemyName;
+    [SerializeField] private TMP_Text enemyHealth;
+
 
 
 
@@ -61,6 +66,13 @@ public class GameUI : MonoBehaviour
     {
         unitSprite.sprite = character.characterClass.unitSprite;
         unitName.text = character.characterClass.name;
+        unitHealth.text = character.characterClass.healthPoints + " / " + Mathf.Abs(character.currentHealth);
+    }
+
+    public void ShowEnemyInfo(CharacterInfo character)
+    {
+        enemySprite.sprite = character.characterClass.unitSprite;
+        enemyName.text = character.characterClass.name;
         unitHealth.text = character.characterClass.healthPoints + " / " + Mathf.Abs(character.currentHealth);
     }
 

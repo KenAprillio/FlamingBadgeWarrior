@@ -32,6 +32,7 @@ public class MouseController : MonoBehaviour
 
     [Header("Gameplay UI Gameobjects")]
     public GameObject unitData;
+    public GameObject enemyData;
     public GameObject playerActions;
     public GameObject confirmAttack;
     public GameObject winScreen;
@@ -125,6 +126,8 @@ public class MouseController : MonoBehaviour
                         {
                             item.HideTile();
                         }
+
+                        GetEnemyData(targetUnitTile.unitOnTile);
                     }
                 } else if (!isMovingUnit && !isChoosingUnit && !isAttackingUnit && !phaseTwo)
                 {
@@ -155,6 +158,13 @@ public class MouseController : MonoBehaviour
         unitData.SetActive(true);
         playerActions.SetActive(true);
         playerActions.transform.Find("Move Button").GetComponent<Button>().interactable = true;
+
+    }
+
+    private void GetEnemyData(CharacterInfo character)
+    {
+        GameUI.Instance.ShowEnemyInfo(character);
+        enemyData.SetActive(true);
 
     }
 
@@ -286,11 +296,14 @@ public class MouseController : MonoBehaviour
         NetMakeAttack ma = new NetMakeAttack();
         ma.unitX = targetUnitTile.grid2DLocation.x;
         ma.unitY = targetUnitTile.grid2DLocation.y;
-        ma.damage = character.characterClass.damage;
+        ma.damage = damage;
         ma.teamId = mapManager.currentTeam;
 
         ma.isMagic = (isMagic) ? 1 : 0;
         Client.Instance.SendToServer(ma);
+
+        isMagic = false;
+        enemyData.SetActive(false);
 
         WaitAction();
         
@@ -459,7 +472,7 @@ public class MouseController : MonoBehaviour
 
             Vector2Int targetUnit = new Vector2Int(ma.unitX, ma.unitY);
             CharacterInfo unit = mapManager.map[targetUnit].unitOnTile;
-            AttackUnit(unit, ma.damage, (ma.isMagic == 0) ? false : true);
+            AttackUnit(unit, ma.damage, (ma.isMagic == 1) ? true : false);
         }
     }
 

@@ -120,9 +120,9 @@ public class MapManager : MonoBehaviour
         unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
         cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
         map[unitPos].unitOnTile = unitSpawn;
-        unitSpawn.team = 1;
+        unitSpawn.team = 0;
 
-        /*unitPos = new Vector2Int(4,1);
+        unitPos = new Vector2Int(4, 1);
         unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
         cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
         map[unitPos].unitOnTile = unitSpawn;
@@ -152,7 +152,7 @@ public class MapManager : MonoBehaviour
         unitSpawn = Instantiate(unitPrefabs[2]).GetComponent<CharacterInfo>();
         cursor.PositionCharacterOnTile(unitSpawn, map[unitPos]);
         map[unitPos].unitOnTile = unitSpawn;
-        unitSpawn.team = 1;*/
+        unitSpawn.team = 1;
     }
 
     // Check neighbouring tiles in top, bottom, left, and right of the tile
