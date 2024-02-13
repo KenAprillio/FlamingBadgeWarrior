@@ -13,6 +13,7 @@ public class PathFinder
         List<OverlayTile> openList = new List<OverlayTile>();
         List<OverlayTile> closedList = new List<OverlayTile>();
 
+
         openList.Add(start);
 
         while (openList.Count > 0)

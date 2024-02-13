@@ -11,8 +11,11 @@ public class CharacterInfo : MonoBehaviour
     public bool hasMoved = false;
     public bool isPlayed = false;
 
+    public bool isDead = false;
+
     private void Start()
     {
         currentHealth = characterClass.healthPoints;
     }
+
 }

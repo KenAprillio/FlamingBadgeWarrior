@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Networking.Transport;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,12 +23,22 @@ public class MouseController : MonoBehaviour
     public bool isMovingUnit;
     bool isChoosingUnit = true;
     [HideInInspector] public bool isAttackingUnit;
+    private OverlayTile targetUnitTile;
 
     [Header("Gameplay UI Gameobjects")]
     public GameObject unitData;
     public GameObject playerActions;
+    public GameObject confirmAttack;
+    public GameObject winScreen;
+    public GameObject loseScreen;
 
     [SerializeField] private List<CharacterInfo> myUnits;
+
+    private void Awake()
+    {
+        RegisterEvents();
+        //UnregisterEvents();
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -36,13 +47,8 @@ public class MouseController : MonoBehaviour
         rangeFinder = new RangeFinder();
         mapManager = MapManager.Instance;
 
-        GameObject[] units = GameObject.FindGameObjectsWithTag("Player");
-        foreach (GameObject unit in units)
-        {
-            if (unit.GetComponent<CharacterInfo>().team == 0)
-                myUnits.Add(unit.GetComponent<CharacterInfo>());
-        }
     }
+        
 
     // Update is called once per frame
     void LateUpdate()
@@ -62,28 +68,39 @@ public class MouseController : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 // If theres a unit then find walk range
-                if (overlayTile.unitOnTile && !overlayTile.unitOnTile.isPlayed && isChoosingUnit && !isAttackingUnit && !phaseTwo)
+                if (overlayTile.unitOnTile && !overlayTile.unitOnTile.isPlayed && isChoosingUnit && !isAttackingUnit && !phaseTwo) // <-- Gets unit info when choosing units
                 {
                     if ((overlayTile.unitOnTile.team == 0 && mapManager.isPlayerOneTurn && mapManager.currentTeam == 0) || 
-                        (overlayTile.unitOnTile.team == 1 && !mapManager.isPlayerOneTurn && mapManager.currentTeam == 1))
+                        (overlayTile.unitOnTile.team == 1 && !mapManager.isPlayerOneTurn && mapManager.currentTeam == 1) &&
+                        !overlayTile.unitOnTile.isDead)
                     {
                         character = overlayTile.unitOnTile;
                         PositionCharacterOnTile(character, overlayTile);
                         GetUnitInfoAndShowUI();
                         //GetInRangeTiles();
                     }
-                } else if ((character && overlayTile.isAccesible) && isMovingUnit)
+                } else if ((character && overlayTile.isAccesible) && isMovingUnit) // <-- Gets target tile when moving
                 {
                     character.activeTile.unitOnTile = null;
-                    
+
                     // find path to the clicked tile
-                    path = pathFinder.FindPath(character.activeTile, overlayTile, inRangeTiles);
+                    FindPath(character.activeTile.grid2DLocation.x, character.activeTile.grid2DLocation.y, overlayTile.grid2DLocation.x, overlayTile.grid2DLocation.y);
+
+                    // NET Implementation
+                    NetMakeMove mm = new NetMakeMove();
+                    mm.originalX = character.activeTile.grid2DLocation.x;
+                    mm.originalY = character.activeTile.grid2DLocation.y;
+                    mm.targetX = overlayTile.grid2DLocation.x;
+                    mm.targetY = overlayTile.grid2DLocation.y;
+                    mm.teamId = mapManager.currentTeam;
+                    Client.Instance.SendToServer(mm);
+
                     overlayTile.unitOnTile = character;
                     foreach (var item in inRangeTiles)
                     {
                         item.HideTile();
                     }
-                } else if (character && isAttackingUnit)
+                } else if (character && isAttackingUnit && !confirmAttack.activeSelf) // <-- Gets target Unit when is attacking
                 {
                     if (!overlayTile.isAccesible)
                     {
@@ -93,20 +110,16 @@ public class MouseController : MonoBehaviour
                         }
                         isAttackingUnit = false;
                         playerActions.SetActive(true);
-                    }else if (overlayTile.unitOnTile.team != mapManager.currentTeam && overlayTile.isAccesible)
+                    }else if (overlayTile.unitOnTile.team != mapManager.currentTeam && overlayTile.isAccesible && !overlayTile.unitOnTile.isDead)
                     {
+                        targetUnitTile = overlayTile;
+                        confirmAttack.SetActive(true);
+
                         Debug.Log("Attacked " + overlayTile.unitOnTile.name);
-                        character.isPlayed = true;
                         foreach (var item in inRangeTiles)
                         {
                             item.HideTile();
                         }
-
-                        phaseTwo = false;
-                        character = null;
-                        isMovingUnit = false;
-                        isAttackingUnit = false;
-                        isChoosingUnit = true;
                     }
                 } else if (!isMovingUnit && !isChoosingUnit && !isAttackingUnit && !phaseTwo)
                 {
@@ -156,7 +169,6 @@ public class MouseController : MonoBehaviour
             item.ShowTile();
         }
     }
-
     public void GetInRangeAttack()
     {
         foreach (var item in inRangeTiles)
@@ -183,6 +195,100 @@ public class MouseController : MonoBehaviour
         isAttackingUnit = false;
         isChoosingUnit = true;
 
+        CheckAllUnits();
+    }
+
+    private void CheckAllUnits()
+    {
+        int i = 0;
+        foreach (CharacterInfo unit in myUnits)
+        {
+            if (unit.isPlayed)
+                i++;
+        }
+
+        if (i == myUnits.Count())
+        {
+            Debug.Log("my turn has ended!");
+            mapManager.isPlayerOneTurn = !mapManager.isPlayerOneTurn;
+
+            NetSwitchTurns st = new NetSwitchTurns();
+            if (mapManager.isPlayerOneTurn)
+                st.isPlayerOneTurn = 0;
+            else
+                st.isPlayerOneTurn = 1;
+
+            Client.Instance.SendToServer(st);
+
+            foreach (CharacterInfo unit in myUnits)
+            {
+                unit.isPlayed = false;
+                unit.hasMoved = false;
+            }
+        }
+    }
+
+    private void CheckAllUnitsHealth()
+    {
+        int i = 0;
+        foreach(CharacterInfo unit in myUnits)
+        {
+            if (unit.isDead)
+                i++;
+
+            if (i == myUnits.Count())
+            {
+                Debug.Log("I lost!");
+
+                loseScreen.SetActive(true);
+                winScreen.SetActive(false);
+
+                NetEndGame eg = new NetEndGame();
+                eg.losingTeamId = mapManager.currentTeam;
+                Client.Instance.SendToServer(eg);
+            }
+        }
+    }
+
+    private void FindPath(int originalX, int originalY, int targetX, int targetY)
+    {
+        Vector2Int startLoc = new Vector2Int(originalX, originalY);
+        Vector2Int endLoc = new Vector2Int(targetX, targetY);
+
+        OverlayTile startTile = mapManager.map[startLoc];
+        OverlayTile endTile = mapManager.map[endLoc];
+        path = pathFinder.FindPath(startTile, endTile, new List<OverlayTile>());
+    }
+
+    public void ConfirmAttack()
+    {
+        
+        AttackUnit(targetUnitTile.unitOnTile, character.characterClass.damage);
+
+        // NET Implementation
+        NetMakeAttack ma = new NetMakeAttack();
+        ma.unitX = targetUnitTile.grid2DLocation.x;
+        ma.unitY = targetUnitTile.grid2DLocation.y;
+        ma.damage = character.characterClass.damage;
+        ma.teamId = mapManager.currentTeam;
+        Client.Instance.SendToServer(ma);
+
+        WaitAction();
+        
+    }
+
+    private void AttackUnit(CharacterInfo targetUnit, float damage)
+    {
+        float hitDamage = damage - targetUnit.characterClass.defense;
+
+        targetUnit.currentHealth -= hitDamage;
+
+        if (targetUnit.currentHealth <= 0)
+        {
+            targetUnit.isDead = true;
+        }
+
+        CheckAllUnitsHealth();
     }
 
     // Function to move along the path
@@ -203,16 +309,20 @@ public class MouseController : MonoBehaviour
 
         if (path.Count == 0)
         {
-            character.hasMoved = true;
-            phaseTwo = true;
-            isChoosingUnit = false;
-            isMovingUnit = false;
-            foreach (var item in inRangeTiles)
+            if (character.team == mapManager.currentTeam)
             {
-                item.HideTile();
+                character.hasMoved = true;
+                phaseTwo = true;
+                isChoosingUnit = false;
+                isMovingUnit = false;
+                foreach (var item in inRangeTiles)
+                {
+                    item.HideTile();
+                }
+                playerActions.SetActive(true);
+                playerActions.transform.Find("Move Button").GetComponent<Button>().interactable = false;
+
             }
-            playerActions.SetActive(true);
-            playerActions.transform.Find("Move Button").GetComponent<Button>().interactable = false;
 
             //character = null;
             //mapManager.isPlayerOneTurn = !mapManager.isPlayerOneTurn;
@@ -242,5 +352,128 @@ public class MouseController : MonoBehaviour
         unit.transform.position = new Vector3(tile.transform.position.x, tile.transform.position.y, tile.transform.position.z);
         unit.GetComponent<SpriteRenderer>().sortingOrder = tile.GetComponent<SpriteRenderer>().sortingOrder + 5;
         unit.activeTile = tile;
+    }
+
+    private void RegisterEvents()
+    {
+        NetUtility.C_WELCOME += OnWelcomeClient;
+        NetUtility.C_MAKE_MOVE += OnMakeMoveClient;
+        NetUtility.C_MAKE_ATTACK += OnMakeAttackClient;
+        NetUtility.C_SWITCH_TURNS += OnSwitchTurnsClient;
+        NetUtility.C_END_GAME += OnWinLoseClient;
+
+        NetUtility.S_MAKE_MOVE += OnMakeMoveServer;
+        NetUtility.S_MAKE_ATTACK += OnMakeAttackServer;
+        NetUtility.S_SWITCH_TURNS += OnSwitchTurnsServer;
+        NetUtility.S_END_GAME += OnWinLoseServer;
+
+    }
+
+    private void UnregisterEvents()
+    {
+        NetUtility.C_WELCOME -= OnWelcomeClient;
+        NetUtility.C_MAKE_MOVE -= OnMakeMoveClient;
+
+        NetUtility.S_MAKE_MOVE -= OnMakeMoveServer;
+    }
+
+
+    // Client
+    private void OnWelcomeClient(NetMessage msg)
+    {
+        NetWelcome nw = msg as NetWelcome;
+
+        GameObject[] units = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject unit in units)
+        {
+            if (unit.GetComponent<CharacterInfo>().team == nw.AssignedTeam)
+                myUnits.Add(unit.GetComponent<CharacterInfo>());
+        }
+    }
+
+    private void OnMakeMoveServer(NetMessage msg, NetworkConnection cnn)
+    {
+        NetMakeMove mm = msg as NetMakeMove;
+
+        // Receive, and just broadcast it back
+        Server.Instance.Broadcast(mm);
+    }
+    private void OnMakeMoveClient(NetMessage msg)
+    {
+        NetMakeMove mm = msg as NetMakeMove;
+        Debug.Log("I should be able to move now");
+
+        if (mm.teamId != mapManager.currentTeam)
+        {
+            Vector2Int movingUnit = new Vector2Int(mm.originalX, mm.originalY);
+            character = mapManager.map[movingUnit].unitOnTile;
+
+            FindPath(mm.originalX, mm.originalY, mm.targetX, mm.targetY);
+
+            Vector2Int targetUnitTile = new Vector2Int(mm.targetX, mm.targetY);
+            mapManager.map[targetUnitTile].unitOnTile = character;
+        }
+    }
+
+    private void OnMakeAttackServer(NetMessage msg, NetworkConnection cnn)
+    {
+        NetMakeAttack ma = msg as NetMakeAttack;
+
+        // Receive, and just broadcast it back
+        Server.Instance.Broadcast(ma);
+    }
+    private void OnMakeAttackClient(NetMessage msg)
+    {
+        NetMakeAttack ma = msg as NetMakeAttack;
+
+
+        if (ma.teamId != mapManager.currentTeam)
+        {
+            Debug.Log("I should be attacked");
+
+            Vector2Int targetUnit = new Vector2Int(ma.unitX, ma.unitY);
+            CharacterInfo unit = mapManager.map[targetUnit].unitOnTile;
+            AttackUnit(unit, ma.damage);
+        }
+    }
+
+    private void OnSwitchTurnsServer(NetMessage msg, NetworkConnection cnn)
+    {
+        NetSwitchTurns st = msg as NetSwitchTurns;
+
+        // Receive, and just broadcast it back
+        Server.Instance.Broadcast(st);
+    }
+    private void OnSwitchTurnsClient(NetMessage msg)
+    {
+        NetSwitchTurns st = msg as NetSwitchTurns;
+
+        Debug.Log("Switch Turns!");
+
+        if (st.isPlayerOneTurn == 0)
+        {
+            mapManager.isPlayerOneTurn = true;
+        } else
+        {
+            mapManager.isPlayerOneTurn = false;
+        }
+    }
+
+    private void OnWinLoseServer(NetMessage msg, NetworkConnection cnn)
+    {
+        NetEndGame eg = msg as NetEndGame;
+
+        // Receive, and just broadcast it back
+        Server.Instance.Broadcast(eg);
+    }
+    private void OnWinLoseClient(NetMessage msg)
+    {
+        NetEndGame st = msg as NetEndGame;
+
+        if (st.losingTeamId != mapManager.currentTeam)
+        {
+            winScreen.SetActive(true);
+            loseScreen.SetActive(false);
+        }
     }
 }
