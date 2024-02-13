@@ -23,6 +23,11 @@ public class MouseController : MonoBehaviour
     public bool isMovingUnit;
     bool isChoosingUnit = true;
     [HideInInspector] public bool isAttackingUnit;
+    public bool isMagic;
+    public bool isMagicProperty
+    {
+        get { return isMagic; } set { isMagic = value; }
+    }
     private OverlayTile targetUnitTile;
 
     [Header("Gameplay UI Gameobjects")]
@@ -178,7 +183,14 @@ public class MouseController : MonoBehaviour
 
         isChoosingUnit = true;
         isAttackingUnit = true;
-        inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, character.characterClass.moveRange, character, true);
+
+        int attackRange;
+        if (isMagic)
+            attackRange = character.characterClass.magicRange;
+        else
+            attackRange = character.characterClass.attackRange;
+
+        inRangeTiles = rangeFinder.GetTilesInRange(character.activeTile, attackRange, character, true);
 
         foreach (var item in inRangeTiles)
         {
@@ -262,8 +274,13 @@ public class MouseController : MonoBehaviour
 
     public void ConfirmAttack()
     {
-        
-        AttackUnit(targetUnitTile.unitOnTile, character.characterClass.damage);
+        float damage;
+        if (isMagic)
+            damage = character.characterClass.magicDamage;
+        else
+            damage = character.characterClass.damage;
+
+        AttackUnit(targetUnitTile.unitOnTile, damage, isMagic);
 
         // NET Implementation
         NetMakeAttack ma = new NetMakeAttack();
@@ -271,15 +288,24 @@ public class MouseController : MonoBehaviour
         ma.unitY = targetUnitTile.grid2DLocation.y;
         ma.damage = character.characterClass.damage;
         ma.teamId = mapManager.currentTeam;
+
+        ma.isMagic = (isMagic) ? 1 : 0;
         Client.Instance.SendToServer(ma);
 
         WaitAction();
         
     }
 
-    private void AttackUnit(CharacterInfo targetUnit, float damage)
+    private void AttackUnit(CharacterInfo targetUnit, float damage, bool isMagic = false)
     {
-        float hitDamage = damage - targetUnit.characterClass.defense;
+        float hitDamage;
+        if (!isMagic)
+        {
+            hitDamage = damage - targetUnit.characterClass.defense;
+        } else
+        {
+            hitDamage = damage - targetUnit.characterClass.resistance;
+        }
 
         targetUnit.currentHealth -= hitDamage;
 
@@ -433,7 +459,7 @@ public class MouseController : MonoBehaviour
 
             Vector2Int targetUnit = new Vector2Int(ma.unitX, ma.unitY);
             CharacterInfo unit = mapManager.map[targetUnit].unitOnTile;
-            AttackUnit(unit, ma.damage);
+            AttackUnit(unit, ma.damage, (ma.isMagic == 0) ? false : true);
         }
     }
 

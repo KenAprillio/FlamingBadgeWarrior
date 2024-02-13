@@ -6,6 +6,7 @@ public class NetMakeAttack : NetMessage
     public int unitX;
     public int unitY;
     public int teamId;
+    public int isMagic;
     public float damage;
 
     public NetMakeAttack()
@@ -25,6 +26,7 @@ public class NetMakeAttack : NetMessage
         writer.WriteInt(unitY);
         writer.WriteFloat(damage);
         writer.WriteInt(teamId);
+        writer.WriteInt(isMagic);
     }
     public override void Deserialize(DataStreamReader reader)
     {
@@ -32,7 +34,7 @@ public class NetMakeAttack : NetMessage
         unitY = reader.ReadInt();
         damage = reader.ReadFloat();
         teamId = reader.ReadInt();
-
+        isMagic = reader.ReadInt();
     }
 
     public override void ReceivedOnClient()
